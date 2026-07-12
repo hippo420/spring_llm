@@ -1,9 +1,9 @@
 package app.ai.web;
 
 import app.ai.chat.AttachmentDto;
+import app.ai.chat.ChatHistoryService;
 import app.ai.chat.ChatMessageDto;
 import app.ai.chat.ChatMessageRequest;
-import app.ai.chat.ChatSessionStore;
 import app.ai.chat.ChatSessionSummary;
 import app.ai.chat.feature.BrainstormService;
 import app.ai.chat.feature.ChatFeature;
@@ -36,7 +36,7 @@ import java.util.UUID;
 @RequestMapping("/api")
 public class ChatController {
 
-    private final ChatSessionStore sessionStore;
+    private final ChatHistoryService chatHistoryService;
     private final GeneralChatService generalChatService;
     private final SummarizeService summarizeService;
     private final TranslateService translateService;
@@ -48,7 +48,7 @@ public class ChatController {
     private final DocQaService docQaService;
     private final SentimentAnalysisService sentimentAnalysisService;
 
-    public ChatController(ChatSessionStore sessionStore,
+    public ChatController(ChatHistoryService chatHistoryService,
                            GeneralChatService generalChatService,
                            SummarizeService summarizeService,
                            TranslateService translateService,
@@ -59,7 +59,7 @@ public class ChatController {
                            BrainstormService brainstormService,
                            DocQaService docQaService,
                            SentimentAnalysisService sentimentAnalysisService) {
-        this.sessionStore = sessionStore;
+        this.chatHistoryService = chatHistoryService;
         this.generalChatService = generalChatService;
         this.summarizeService = summarizeService;
         this.translateService = translateService;
@@ -84,34 +84,36 @@ public class ChatController {
 
     @GetMapping("/sessions")
     public List<ChatSessionSummary> sessions() {
-        return sessionStore.findAll();
+        return chatHistoryService.findSessions();
     }
 
     @PostMapping("/sessions")
     public ChatSessionSummary createSession() {
-        return sessionStore.create();
+        return chatHistoryService.createSession();
     }
 
     @DeleteMapping("/sessions/{sessionId}")
     public void deleteSession(@PathVariable String sessionId) {
-        sessionStore.delete(sessionId);
+        chatHistoryService.deleteSession(sessionId);
     }
 
     @GetMapping("/sessions/{sessionId}/messages")
     public List<ChatMessageDto> messages(@PathVariable String sessionId) {
-        return sessionStore.findMessages(sessionId);
+        return chatHistoryService.findMessages(sessionId);
     }
 
     @PostMapping(value = "/sessions/{sessionId}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamReply(@PathVariable String sessionId, @RequestBody ChatMessageRequest request) {
-        sessionStore.appendUserMessage(sessionId, request.content());
+        // Must precede stream(): the ChatFeatureService contract expects the session
+        // context to already end with the current user message.
+        chatHistoryService.appendMessage(sessionId, "user", request.content());
 
         ChatFeatureService service = resolveService(request.featureOrDefault());
 
         StringBuilder fullReply = new StringBuilder();
-        return service.stream(request.content())
+        return service.stream(sessionId, request.content())
                 .doOnNext(fullReply::append)
-                .doOnComplete(() -> sessionStore.appendAssistantMessage(sessionId, fullReply.toString()));
+                .doOnComplete(() -> chatHistoryService.appendMessage(sessionId, "assistant", fullReply.toString()));
     }
 
     private ChatFeatureService resolveService(ChatFeature feature) {
