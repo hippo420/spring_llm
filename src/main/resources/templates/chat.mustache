@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring AI Chat</title>
+    <link rel="stylesheet" href="/css/chat.css">
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <button id="newChatBtn" class="new-chat-btn" type="button">+ 새 대화</button>
+        <ul id="sessionList" class="session-list"></ul>
+    </aside>
+
+    <main class="main">
+        <div id="messages" class="messages">
+            <div class="empty-state" id="emptyState">왼쪽에서 새 대화를 시작하세요.</div>
+        </div>
+
+        <form id="chatForm" class="chat-form" autocomplete="off">
+            <div id="attachmentChip" class="attachment-chip" hidden>
+                <span id="attachmentName"></span>
+                <button type="button" id="removeAttachmentBtn" aria-label="첨부 제거">&times;</button>
+            </div>
+            <div class="chat-input-row">
+                <select id="featureSelect" class="feature-select" title="기능 선택"></select>
+                <label class="attach-btn" for="fileInput" title="파일 첨부">📎</label>
+                <input type="file" id="fileInput" hidden>
+                <textarea id="messageInput" class="message-input" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+                <button type="submit" id="sendBtn" class="send-btn">전송</button>
+            </div>
+        </form>
+    </main>
+</div>
+
+<script src="/js/vendor/marked.min.js"></script>
+<script src="/js/vendor/purify.min.js"></script>
+<script src="/js/chat.js"></script>
+</body>
+</html>

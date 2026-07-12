@@ -1,0 +1,354 @@
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    background: #f5f6f8;
+    color: #1f2328;
+}
+
+.app {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: #1e2129;
+    color: #e8e8e8;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+}
+
+.new-chat-btn {
+    background: #2f6fed;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+
+.new-chat-btn:hover {
+    background: #2559c7;
+}
+
+.session-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.session-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #c7c9cf;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+}
+
+.session-item:hover {
+    background: #2a2e38;
+}
+
+.session-item.active {
+    background: #323744;
+    color: #fff;
+}
+
+.session-item .delete-btn {
+    background: none;
+    border: none;
+    color: #8a8d96;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    visibility: hidden;
+}
+
+.session-item:hover .delete-btn {
+    visibility: visible;
+}
+
+.session-item .delete-btn:hover {
+    color: #ff6b6b;
+}
+
+/* Main */
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.empty-state {
+    margin: auto;
+    color: #9aa0a6;
+    font-size: 14px;
+}
+
+.message {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    line-height: 1.5;
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.message.user {
+    align-self: flex-end;
+    background: #2f6fed;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    white-space: pre-wrap;
+}
+
+.message.assistant {
+    align-self: flex-start;
+    background: #fff;
+    border: 1px solid #e3e5e8;
+    border-bottom-left-radius: 4px;
+}
+
+.message .attachment-tag {
+    display: block;
+    font-size: 12px;
+    opacity: 0.85;
+    margin-bottom: 4px;
+}
+
+/* Markdown rendering (assistant messages) */
+.message.assistant > :first-child {
+    margin-top: 0;
+}
+
+.message.assistant > :last-child {
+    margin-bottom: 0;
+}
+
+.message.assistant p,
+.message.assistant ul,
+.message.assistant ol,
+.message.assistant pre,
+.message.assistant blockquote,
+.message.assistant table {
+    margin: 0 0 8px;
+}
+
+.message.assistant h1,
+.message.assistant h2,
+.message.assistant h3 {
+    margin: 12px 0 8px;
+    line-height: 1.3;
+}
+
+.message.assistant h1 {
+    font-size: 20px;
+}
+
+.message.assistant h2 {
+    font-size: 17px;
+}
+
+.message.assistant h3 {
+    font-size: 15px;
+}
+
+.message.assistant ul,
+.message.assistant ol {
+    padding-left: 22px;
+}
+
+.message.assistant li {
+    margin: 2px 0;
+}
+
+.message.assistant blockquote {
+    padding: 4px 12px;
+    border-left: 3px solid #d7dae0;
+    color: #5f6368;
+}
+
+.message.assistant code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 13px;
+    background: #f0f1f3;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+.message.assistant pre {
+    padding: 12px;
+    background: #1e2129;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.message.assistant pre code {
+    background: none;
+    padding: 0;
+    color: #e8e8e8;
+}
+
+.message.assistant table {
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.message.assistant th,
+.message.assistant td {
+    border: 1px solid #e3e5e8;
+    padding: 6px 10px;
+    text-align: left;
+}
+
+.message.assistant a {
+    color: #2f6fed;
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 2px;
+}
+
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #9aa0a6;
+    animation: typing-bounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
+}
+
+/* Input area */
+.chat-form {
+    border-top: 1px solid #e3e5e8;
+    background: #fff;
+    padding: 12px 20px 18px;
+}
+
+.attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #eef2ff;
+    color: #2f4bd0;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.attachment-chip button {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.chat-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: #f5f6f8;
+    border-radius: 12px;
+    padding: 8px 10px;
+}
+
+.attach-btn {
+    cursor: pointer;
+    font-size: 18px;
+    padding: 6px;
+}
+
+.feature-select {
+    border: 1px solid #d7dae0;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    padding: 6px 8px;
+    color: #1f2328;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.message-input {
+    flex: 1;
+    resize: none;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    line-height: 1.4;
+    max-height: 160px;
+    padding: 6px 4px;
+    font-family: inherit;
+}
+
+.message-input:focus {
+    outline: none;
+}
+
+.send-btn {
+    background: #2f6fed;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.send-btn:disabled {
+    background: #a9b8e8;
+    cursor: not-allowed;
+}
