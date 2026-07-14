@@ -1,9 +1,6 @@
-package app.ai.chat.feature;
+package app.ai.chat.feature.normal;
 
-import app.ai.chat.ChatHistoryService;
-import app.ai.chat.ChatMessageDto;
-import app.ai.chat.ConversationContext;
-import org.springframework.ai.chat.messages.AssistantMessage;
+import app.ai.chat.feature.ChatFeatureService;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -13,15 +10,15 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Low-level tier: talks to {@link ChatModel} directly with hand-built {@link Prompt}/{@link
- * org.springframework.ai.chat.messages.Message}s instead of the {@link org.springframework.ai.chat.client.ChatClient}
- * fluent API used by the other feature services. See docs/spring-ai-chatmodel-vs-chatclient.md
- * for how the two tiers correspond. Multi-turn memory is likewise assembled by hand here —
- * this is exactly what the advanced tier's {@code messages()} call does behind the scenes.
+ * 영속성 없는 저수준 계층: 대화 히스토리를 전혀 사용하지 않고, 시스템 프롬프트 +
+ * 현재 사용자 메시지 하나로만 응답하는 단발 대화. 다른 기능 서비스들이 쓰는
+ * {@link org.springframework.ai.chat.client.ChatClient} 플루언트 API 대신, 직접 만든
+ * {@link Prompt}/{@link Message}로 {@link ChatModel}과 직접 통신한다.
+ * 두 계층의 대응 관계는 docs/spring-ai-chatmodel-vs-chatclient.md 참고.
+ * 영속성(멀티턴 메모리)이 붙는 버전은 {@link app.ai.chat.feature.history.HistoryChatService} 참고.
  */
 @Service
 public class GeneralChatService implements ChatFeatureService {
@@ -44,26 +41,16 @@ public class GeneralChatService implements ChatFeatureService {
             """;
 
     private final ChatModel chatModel;
-    private final ChatHistoryService chatHistoryService;
 
-    public GeneralChatService(ChatModel chatModel, ChatHistoryService chatHistoryService) {
+    public GeneralChatService(ChatModel chatModel) {
         this.chatModel = chatModel;
-        this.chatHistoryService = chatHistoryService;
     }
 
     @Override
-    public Flux<String> stream(String sessionId, String userMessage) {
-        ConversationContext context = chatHistoryService.getContext(sessionId);
-
-        List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage(SYSTEM_PROMPT));
-        context.summary().ifPresent(s ->
-                messages.add(new SystemMessage("Summary of the earlier conversation:\n" + s)));
-        for (ChatMessageDto dto : context.recentMessages()) {
-            messages.add("user".equals(dto.role())
-                    ? new UserMessage(dto.content())
-                    : new AssistantMessage(dto.content()));
-        }
+    public Flux<String> stream(String userMessage) {
+        List<Message> messages = List.of(
+                new SystemMessage(SYSTEM_PROMPT),
+                new UserMessage(userMessage));
 
         return chatModel.stream(new Prompt(messages))
                 .mapNotNull(response -> {

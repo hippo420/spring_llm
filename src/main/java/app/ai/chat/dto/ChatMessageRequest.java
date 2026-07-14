@@ -1,4 +1,4 @@
-package app.ai.chat;
+package app.ai.chat.dto;
 
 import app.ai.chat.feature.ChatFeature;
 

@@ -1,4 +1,4 @@
-package app.ai.chat;
+package app.ai.chat.dto;
 
 import java.time.Instant;
 

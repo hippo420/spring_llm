@@ -1,6 +1,6 @@
 package app.ai.chat.feature;
 
-import app.ai.chat.ChatHistoryService;
+import app.ai.chat.history.ChatHistoryService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 

@@ -2,7 +2,7 @@ package app.ai.chat.feature;
 
 public enum ChatFeature {
     GENERAL_CHAT("일반 대화"),
-    SUMMARIZE("요약"),
+    HISTORY("대화영속성"),
     TRANSLATE("번역"),
     CODE_EXPLAIN("코드 설명"),
     CODE_REVIEW("코드 리뷰"),

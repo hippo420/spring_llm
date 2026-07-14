@@ -5,9 +5,20 @@ import reactor.core.publisher.Flux;
 public interface ChatFeatureService {
 
     /**
-     * Streams the assistant reply. Contract: the caller has already appended the current
-     * user message to {@link app.ai.chat.ChatHistoryService}, so the session context ends
-     * with {@code userMessage}.
+     * 영속성 없는 단발 스트리밍. 세션/히스토리를 전혀 사용하지 않고 현재 사용자
+     * 메시지 하나로만 응답한다. (예: {@link app.ai.chat.feature.normal.GeneralChatService})
      */
-    Flux<String> stream(String sessionId, String userMessage);
+    default Flux<String> stream(String userMessage) {
+        throw new UnsupportedOperationException("이 기능은 세션(영속성) 기반 스트리밍만 지원한다.");
+    }
+
+    /**
+     * 영속성(대화 히스토리) 기반 스트리밍. 계약: 호출자가 현재 사용자 메시지를 이미
+     * {@link app.ai.chat.history.ChatHistoryService}에 추가했으므로, 세션 컨텍스트는
+     * {@code userMessage}로 끝난다. 기본 구현은 히스토리를 무시하고 단발 스트리밍에
+     * 위임한다 — 영속성을 지원하는 서비스는 이 메서드를 오버라이드한다.
+     */
+    default Flux<String> stream(String sessionId, String userMessage) {
+        return stream(userMessage);
+    }
 }

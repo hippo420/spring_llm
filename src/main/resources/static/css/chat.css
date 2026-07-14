@@ -15,7 +15,7 @@ html, body {
     height: 100vh;
 }
 
-/* Sidebar */
+/* 사이드바 */
 .sidebar {
     width: 280px;
     flex-shrink: 0;
@@ -91,7 +91,7 @@ html, body {
     color: #ff6b6b;
 }
 
-/* Main */
+/* 메인 영역 */
 .main {
     flex: 1;
     display: flex;
@@ -145,7 +145,7 @@ html, body {
     margin-bottom: 4px;
 }
 
-/* Markdown rendering (assistant messages) */
+/* 마크다운 렌더링 (어시스턴트 메시지) */
 .message.assistant > :first-child {
     margin-top: 0;
 }
@@ -268,7 +268,7 @@ html, body {
     }
 }
 
-/* Input area */
+/* 입력 영역 */
 .chat-form {
     border-top: 1px solid #e3e5e8;
     background: #fff;

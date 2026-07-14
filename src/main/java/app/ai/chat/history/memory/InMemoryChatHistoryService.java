@@ -1,6 +1,11 @@
-package app.ai.chat;
+package app.ai.chat.history.memory;
 
+import app.ai.chat.dto.ChatMessageDto;
+import app.ai.chat.dto.ChatSessionSummary;
+import app.ai.chat.dto.ConversationContext;
+import app.ai.chat.history.ChatHistoryService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -14,11 +19,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Stage 1 of the tiered history design (docs/chat-history-tiered-storage-design.md):
- * in-memory only, but messages already carry the per-session monotonic seq that Stage 2
- * (Redis) and Stage 3 (RDBMS archive/summaries) build on. Summaries are always empty here.
+ * 계층형 히스토리 설계의 1단계 (docs/chat-history-tiered-storage-design.md):
+ * 인메모리 전용이지만, 메시지에는 2단계(Redis)와 3단계(RDBMS 아카이브/요약)가 기반으로
+ * 삼을 세션별 단조 증가 seq가 이미 부여된다. 여기서 요약은 항상 비어 있다.
+ *
+ * <p>{@code app.chat.history.mode=memory}일 때 활성화된다 (설정이 없으면 기본값).
  */
 @Service
+@ConditionalOnProperty(name = "app.chat.history.mode", havingValue = "memory", matchIfMissing = true)
 public class InMemoryChatHistoryService implements ChatHistoryService {
 
     private record StoredMessage(long seq, String role, String content, Instant createdAt) {
@@ -26,7 +34,7 @@ public class InMemoryChatHistoryService implements ChatHistoryService {
 
     private static final class Session {
         final String id;
-        final String title;
+        volatile String title; // 첫 턴 완료 후 LLM 요약 제목으로 교체될 수 있다
         final Instant createdAt;
         final AtomicLong seq = new AtomicLong();
         final List<StoredMessage> messages = new CopyOnWriteArrayList<>();
@@ -66,6 +74,14 @@ public class InMemoryChatHistoryService implements ChatHistoryService {
     }
 
     @Override
+    public void updateSessionTitle(String sessionId, String title) {
+        Session session = sessions.get(sessionId);
+        if (session != null) {
+            session.title = title;
+        }
+    }
+
+    @Override
     public long appendMessage(String sessionId, String role, String content) {
         Session session = sessions.computeIfAbsent(sessionId,
                 id -> new Session(id, "새 대화", Instant.now()));
@@ -91,7 +107,7 @@ public class InMemoryChatHistoryService implements ChatHistoryService {
                 .toList();
     }
 
-    // COW subList views can throw on concurrent writes; a copy is safe to slice.
+    // CopyOnWriteArrayList의 subList 뷰는 동시 쓰기 시 예외가 날 수 있다; 복사본은 안전하게 자를 수 있다.
     private List<StoredMessage> snapshotOf(String sessionId) {
         Session session = sessions.get(sessionId);
         return session == null ? List.of() : List.copyOf(session.messages);

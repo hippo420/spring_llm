@@ -82,6 +82,7 @@
         const res = await fetch('/api/sessions');
         const sessions = await res.json();
         renderSessions(sessions);
+        return sessions;
     }
 
     function renderSessions(sessions) {
@@ -257,6 +258,9 @@
                 if (!rawText) assistantBubble.innerHTML = '';
                 sendBtn.disabled = false;
                 loadSessions();
+                // 첫 턴 완료 후 서버가 비동기로 LLM 요약 제목을 만든다 —
+                // 몇 초 뒤 한 번 더 목록을 읽어 "새 대화"를 생성된 제목으로 교체한다.
+                setTimeout(loadSessions, 4000);
             },
             (err) => {
                 rawText += `\n[오류: ${err.message}]`;
@@ -267,5 +271,11 @@
     });
 
     loadFeatures();
-    loadSessions();
+    // 페이지 로드 시 세션 목록을 읽고, 가장 최근 세션의 실제 대화(영속 저장분)를
+    // 자동으로 불러온다 — 서버를 재시작해도 이어서 보이는 화면이 된다.
+    loadSessions().then((sessions) => {
+        if (!state.currentSessionId && sessions.length > 0) {
+            selectSession(sessions[0].id);
+        }
+    });
 })();
