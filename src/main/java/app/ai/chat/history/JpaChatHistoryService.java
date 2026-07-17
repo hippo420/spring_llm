@@ -24,7 +24,7 @@ import java.util.UUID;
 /**
  * RDBMS(PostgreSQL) 기반 구현 — JPA Entity({@link ChatSessionEntity},
  * {@link ChatMessageEntity}, {@link ChatSummaryEntity})로 대화를 영속화한다.
- * 설계 문서(docs/chat-history-tiered-storage-design.md)의 L3 스키마를 그대로 따르되,
+ * 설계 문서(docs/04-chat-history-tiered-storage-design.md)의 L3 스키마를 그대로 따르되,
  * 여기서는 백업이 아니라 단독 저장소로 동작한다. tiered 모드에서는
  * {@link TieredChatHistoryService}가 이 클래스를 보관 계층(L3)으로 상속 재사용한다.
  *

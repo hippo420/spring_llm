@@ -160,7 +160,11 @@
         }
     }
 
-    async function streamChat(sessionId, content, feature, onToken, onDone, onError) {
+    // SSE 이벤트 프로토콜 (docs/07-thinking-tool-status-design.md 4절):
+    //   기본(무명) 이벤트 = 답변 토큰, event:thinking = 추론 델타,
+    //   event:status = 서버 진행 상태 문구("문서 검색 중..." 등),
+    //   event:sources = 참조 문서 파일명 목록(개행 구분), event:tool = 도구 상태 JSON.
+    async function streamChat(sessionId, content, feature, {onToken, onThinking, onStatus, onSources, onTool, onDone, onError}) {
         let res;
         try {
             res = await fetch(`/api/sessions/${sessionId}/messages/stream`, {
@@ -190,12 +194,26 @@
             while ((boundary = buffer.indexOf('\n\n')) !== -1) {
                 const rawEvent = buffer.slice(0, boundary);
                 buffer = buffer.slice(boundary + 2);
-                const text = rawEvent
-                    .split('\n')
+                const lines = rawEvent.split('\n');
+                const evName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim() ?? '';
+                const text = lines
                     .filter((line) => line.startsWith('data:'))
                     .map((line) => line.slice(5))
                     .join('\n');
-                if (text.length > 0) onToken(text);
+                if (text.length === 0) continue;
+                if (evName === 'thinking') {
+                    onThinking(text);
+                } else if (evName === 'status') {
+                    onStatus(text);
+                } else if (evName === 'sources') {
+                    onSources(text.split('\n').filter((n) => n.trim().length > 0));
+                } else if (evName === 'tool') {
+                    try {
+                        onTool(JSON.parse(text));
+                    } catch (ignored) { /* 형식이 깨진 상태 이벤트는 표시만 포기한다 */ }
+                } else {
+                    onToken(text);
+                }
             }
         }
         onDone();
@@ -255,30 +273,108 @@
         sendBtn.disabled = true;
         const assistantBubble = addLoadingBubble();
         let rawText = '';
+        let thinkingText = '';
+        // 말풍선 내부: 추론 패널 + 답변. 진행 상태·참조 문서는 말풍선 내부가 아니라
+        // 말풍선 "아래"에 붙는 별도 형제 요소다 (docs/07-thinking-tool-status-design.md 6.2절).
+        let thinkingPanel = null;
+        let thinkingBody = null;
+        let answerBody = null;
+        let statusLine = null;
+        let sourceFiles = [];
 
-        await streamChat(
-            state.currentSessionId,
-            text,
-            featureSelect.value,
-            (chunk) => {
+        function ensureSkeleton() {
+            if (answerBody) return;
+            assistantBubble.innerHTML = '';
+            thinkingPanel = document.createElement('details');
+            thinkingPanel.className = 'thinking-panel';
+            thinkingPanel.open = true;
+            thinkingPanel.hidden = true;
+            thinkingPanel.appendChild(el('summary', null, '🧠 추론 과정'));
+            thinkingBody = el('div', 'thinking-body');
+            thinkingPanel.appendChild(thinkingBody);
+            answerBody = el('div', 'answer-body');
+            assistantBubble.append(thinkingPanel, answerBody);
+        }
+
+        // 진행 상태: 현재 작업 하나만 문자로 표시하고, 답변이 완료되면 제거한다.
+        function showStatus(text) {
+            if (!statusLine) {
+                statusLine = el('div', 'stream-status');
+                assistantBubble.after(statusLine);
+            }
+            statusLine.textContent = text;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function clearStatus() {
+            statusLine?.remove();
+            statusLine = null;
+        }
+
+        // 참조 문서: 답변 완료 후 말풍선 아래에 확장자별 아이콘과 함께 표시한다.
+        const EXT_ICONS = {
+            pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗',
+            ppt: '📙', pptx: '📙', txt: '📄', md: '📄', hwp: '📝', hwpx: '📝',
+        };
+
+        function renderSources() {
+            if (sourceFiles.length === 0) return;
+            const list = el('div', 'source-list');
+            list.appendChild(el('span', 'source-label', '참조 문서'));
+            sourceFiles.forEach((name) => {
+                const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+                list.appendChild(el('span', 'source-item', `${EXT_ICONS[ext] ?? '📎'} ${name}`));
+            });
+            assistantBubble.after(list);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        await streamChat(state.currentSessionId, text, featureSelect.value, {
+            onToken: (chunk) => {
+                ensureSkeleton();
                 rawText += chunk;
-                assistantBubble.innerHTML = renderMarkdown(rawText);
+                answerBody.innerHTML = renderMarkdown(rawText);
                 messagesEl.scrollTop = messagesEl.scrollHeight;
             },
-            () => {
-                if (!rawText) assistantBubble.innerHTML = '';
+            onThinking: (chunk) => {
+                ensureSkeleton();
+                thinkingPanel.hidden = false;
+                thinkingText += chunk;
+                thinkingBody.innerHTML = renderMarkdown(thinkingText);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            },
+            onStatus: showStatus,
+            onSources: (names) => {
+                sourceFiles = names;
+            },
+            // 도구 실행(Phase 2)도 "현재 작업" 한 줄 표시로 흡수한다.
+            onTool: (status) => {
+                if (status.phase === 'start') {
+                    showStatus(`${status.name} 실행 중...`);
+                } else {
+                    showStatus(status.ok ? `${status.name} 완료` : `${status.name} 실패`);
+                }
+            },
+            onDone: () => {
+                clearStatus();
+                // 최종 화면의 주인공은 답변 — 추론 패널은 자동으로 접는다 (토글 가능).
+                if (thinkingPanel && !thinkingPanel.hidden) thinkingPanel.open = false;
+                if (!rawText && !thinkingText) assistantBubble.innerHTML = '';
+                renderSources();
                 sendBtn.disabled = false;
                 loadSessions();
                 // 첫 턴 완료 후 서버가 비동기로 LLM 요약 제목을 만든다 —
                 // 몇 초 뒤 한 번 더 목록을 읽어 "새 대화"를 생성된 제목으로 교체한다.
                 setTimeout(loadSessions, 4000);
             },
-            (err) => {
+            onError: (err) => {
+                clearStatus();
+                ensureSkeleton();
                 rawText += `\n[오류: ${err.message}]`;
-                assistantBubble.innerHTML = renderMarkdown(rawText);
+                answerBody.innerHTML = renderMarkdown(rawText);
                 sendBtn.disabled = false;
-            }
-        );
+            },
+        });
     });
 
     loadFeatures();

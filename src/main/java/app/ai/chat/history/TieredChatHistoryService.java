@@ -21,7 +21,7 @@ import java.util.UUID;
 
 /**
  * 계층형 구현 — Redis가 최근 대화(활성 구간), RDBMS가 전체 대화의 보관(원장)을 맡는다
- * (docs/chat-history-tiered-storage-design.md 2절의 L2+L3).
+ * (docs/04-chat-history-tiered-storage-design.md 2절의 L2+L3).
  *
  * <p><b>쓰기</b>: 먼저 JPA로 영속화해 seq를 발급받고(원장 — 유실되면 안 되는 쪽),
  * 같은 메시지를 Redis 리스트({@code chat:{sid}:messages})에 write-through로 추가한 뒤

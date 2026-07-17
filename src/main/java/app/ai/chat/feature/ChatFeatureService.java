@@ -1,5 +1,6 @@
 package app.ai.chat.feature;
 
+import app.ai.chat.dto.ChatStreamEvent;
 import reactor.core.publisher.Flux;
 
 public interface ChatFeatureService {
@@ -20,5 +21,15 @@ public interface ChatFeatureService {
      */
     default Flux<String> stream(String sessionId, String userMessage) {
         return stream(userMessage);
+    }
+
+    /**
+     * 영속성 기반 스트리밍의 이벤트 버전 (docs/07-thinking-tool-status-design.md 5.1절):
+     * 답변 토큰(TOKEN) 외에 추론 델타(THINKING)·도구 상태(TOOL)를 함께 흘릴 수 있다.
+     * 기본 구현은 기존 {@link #stream(String, String)}을 TOKEN 이벤트로 감싼다 —
+     * 확장 채널이 필요한 서비스만 오버라이드한다.
+     */
+    default Flux<ChatStreamEvent> streamEvents(String sessionId, String userMessage) {
+        return stream(sessionId, userMessage).map(ChatStreamEvent::token);
     }
 }

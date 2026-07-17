@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * 대화 저장소의 단일 진입점. 호출자(컨트롤러, 기능 서비스)는 뒤에 있는 저장 계층을 전혀
  * 알지 못한다 — 1단계는 인메모리, 2단계는 Redis 추가, 3단계는 RDBMS 아카이브 + 롤링 요약
- * 추가. docs/chat-history-tiered-storage-design.md 참고.
+ * 추가. docs/04-chat-history-tiered-storage-design.md 참고.
  */
 public interface ChatHistoryService {
 

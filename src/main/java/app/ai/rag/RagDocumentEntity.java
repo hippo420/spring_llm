@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * rag_document 테이블 (docs/doc-rag-design.md 4.2절) — 세션에 업로드된 문서의 관리 원장.
+ * rag_document 테이블 (docs/06-doc-rag-design.md 4.2절) — 세션에 업로드된 문서의 관리 원장.
  * 청크 본문/임베딩은 pgvector(chat_doc_chunk)에 있고, 이 엔티티는 "이 세션에 어떤 문서가
  * 몇 청크로 들어갔나"를 벡터 테이블 조회 없이 답하기 위한 메타데이터만 가진다.
  */

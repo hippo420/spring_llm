@@ -19,7 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 계층형 히스토리 설계의 1단계 (docs/chat-history-tiered-storage-design.md):
+ * 계층형 히스토리 설계의 1단계 (docs/04-chat-history-tiered-storage-design.md):
  * 인메모리 전용이지만, 메시지에는 2단계(Redis)와 3단계(RDBMS 아카이브/요약)가 기반으로
  * 삼을 세션별 단조 증가 seq가 이미 부여된다. 여기서 요약은 항상 비어 있다.
  *

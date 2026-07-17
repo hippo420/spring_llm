@@ -1,4 +1,4 @@
--- 대화 영속화 L3 스키마 (docs/chat-history-tiered-storage-design.md 3.3절)
+-- 대화 영속화 L3 스키마 (docs/04-chat-history-tiered-storage-design.md 3.3절)
 -- 자동 실행되지 않는다 — 로컬 Postgres에 직접 실행할 것.
 -- (또는 개발 중에는 spring.jpa.hibernate.ddl-auto=update로 Entity에서 자동 생성 가능)
 
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS chat_message (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_message_session ON chat_message(session_id, seq);
 
--- 문서 RAG (docs/doc-rag-design.md 4절) ------------------------------------
+-- 문서 RAG (docs/06-doc-rag-design.md 4절) ------------------------------------
 -- 벡터 청크 테이블 chat_doc_chunk는 Spring AI가 자동 생성한다
 -- (spring.ai.vectorstore.pgvector.initialize-schema=true, 1024차원/HNSW/cosine).
 -- 기존 vector_store 테이블(768차원)은 다른 프로젝트 소유 — 건드리지 않는다.

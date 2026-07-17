@@ -1,5 +1,6 @@
 package app.ai.chat.feature;
 
+import app.ai.chat.dto.ChatStreamEvent;
 import app.ai.chat.history.ChatHistoryService;
 import app.ai.rag.DocumentIngestionService;
 import app.ai.rag.RagDocumentEntity;
@@ -17,11 +18,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
- * 문서 기반 Q&A (docs/doc-rag-design.md 6절): 두 스코프를 함께 검색해
+ * 문서 기반 Q&A (docs/06-doc-rag-design.md 6절): 두 스코프를 함께 검색해
  * {@link #augment} 훅으로 프롬프트 맨 앞에 주입한다.
  *
  * <ul>
@@ -44,14 +47,14 @@ public class DocQaService extends AbstractChatFeatureService {
             document repository and from files the user uploaded to this conversation.
             Ground every answer in those excerpts. If the excerpts cannot answer the question,
             say so plainly instead of guessing — never fabricate document content.
-            End each answer with the source line "출처: <filename>" listing the documents
-            you actually used. ALWAYS answer in Korean.
+            Do NOT append a source list or "출처:" line to your answer — the UI displays
+            referenced documents separately. ALWAYS answer in Korean.
             """;
 
     private static final String CONTEXT_HEADER = """
             아래는 공용 문서 저장소와 사용자가 이 대화에 업로드한 문서에서 검색된 발췌다.
             답변은 반드시 이 발췌에 근거하고, 발췌로 답할 수 없으면 그렇다고 말하라.
-            답변 끝에 "출처: 파일명" 형식으로 실제 사용한 근거 문서를 표기하라.
+            참조 문서는 시스템이 화면에 따로 표시하므로 답변에 출처 목록을 덧붙이지 마라.
             """;
 
     private static final String SESSION_SECTION_HEADER = "\n== 이 대화에 업로드된 문서 발췌 ==\n";
@@ -96,14 +99,17 @@ public class DocQaService extends AbstractChatFeatureService {
     }
 
     @Override
-    protected List<Message> augment(String sessionId, String userMessage, List<Message> messages) {
+    protected List<Message> augment(String sessionId, String userMessage, List<Message> messages,
+                                    Consumer<ChatStreamEvent> eventEmitter) {
         List<Message> augmented = new ArrayList<>();
-        augmented.add(new SystemMessage(buildRetrievalContext(sessionId, userMessage)));
+        augmented.add(new SystemMessage(buildRetrievalContext(sessionId, userMessage, eventEmitter)));
         augmented.addAll(messages);
         return augmented;
     }
 
-    private String buildRetrievalContext(String sessionId, String userMessage) {
+    private String buildRetrievalContext(String sessionId, String userMessage,
+                                         Consumer<ChatStreamEvent> events) {
+        events.accept(ChatStreamEvent.status("문서 검색 중..."));
         List<Document> sessionResults;
         List<Document> sharedResults;
         try {
@@ -111,13 +117,20 @@ public class DocQaService extends AbstractChatFeatureService {
             sharedResults = searchSharedCorpus(userMessage);
         } catch (Exception e) {
             log.warn("문서 벡터 검색 실패 — 검색 없이 대화 계속 (session={}): {}", sessionId, e.getMessage());
+            events.accept(ChatStreamEvent.status("문서 검색 실패 — 문서 참조 없이 답변합니다"));
             return SEARCH_FAILED_NOTICE;
         }
 
         if (sessionResults.isEmpty() && sharedResults.isEmpty()) {
             log.debug("문서 검색 결과 없음 (session={}, query={})", sessionId, userMessage);
+            events.accept(ChatStreamEvent.status("문서 검색 완료 — 관련 발췌 없음"));
             return NO_MATCH_NOTICE;
         }
+
+        events.accept(ChatStreamEvent.status(sessionResults.isEmpty()
+                ? "문서 검색 완료 — 공용 문서 발췌 %d건 참조".formatted(sharedResults.size())
+                : "문서 검색 완료 — 첨부 %d건 · 공용 %d건 참조".formatted(sessionResults.size(), sharedResults.size())));
+        events.accept(ChatStreamEvent.sources(distinctSourceNames(sessionResults, sharedResults)));
 
         log.debug("문서 검색 주입: 세션 첨부 {}건 + 공용 {}건 (session={})",
                 sessionResults.size(), sharedResults.size(), sessionId);
@@ -183,6 +196,19 @@ public class DocQaService extends AbstractChatFeatureService {
                     .append('\n');
         }
         return i;
+    }
+
+    /** 참조 문서 파일명 목록 (세션 첨부 우선, 중복 제거, 개행 구분) — SOURCES 이벤트 payload. */
+    private static String distinctSourceNames(List<Document> sessionResults, List<Document> sharedResults) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        for (Document doc : sessionResults) {
+            names.add(sourceName(doc));
+        }
+        for (Document doc : sharedResults) {
+            names.add(sourceName(doc));
+        }
+        names.remove("unknown");   // 이름 없는 청크는 표시 가치가 없다
+        return String.join("\n", names);
     }
 
     private static String sourceName(Document doc) {

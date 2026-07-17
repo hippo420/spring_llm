@@ -24,7 +24,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 문서 인제스천 파이프라인 (docs/doc-rag-design.md 5절):
+ * 문서 인제스천 파이프라인 (docs/06-doc-rag-design.md 5절):
  * 업로드 파일 → Tika 파싱 → 토큰 청크 분할 → 메타데이터 부착 → pgvector 저장
  * (임베딩은 {@link VectorStore#add}가 내부에서 bge-m3로 수행).
  *

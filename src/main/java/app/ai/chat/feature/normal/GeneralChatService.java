@@ -17,7 +17,7 @@ import java.util.List;
  * 현재 사용자 메시지 하나로만 응답하는 단발 대화. 다른 기능 서비스들이 쓰는
  * {@link org.springframework.ai.chat.client.ChatClient} 플루언트 API 대신, 직접 만든
  * {@link Prompt}/{@link Message}로 {@link ChatModel}과 직접 통신한다.
- * 두 계층의 대응 관계는 docs/spring-ai-chatmodel-vs-chatclient.md 참고.
+ * 두 계층의 대응 관계는 docs/01-spring-ai-chatmodel-vs-chatclient.md 참고.
  * 영속성(멀티턴 메모리)이 붙는 버전은 {@link app.ai.chat.feature.history.HistoryChatService} 참고.
  */
 @Service

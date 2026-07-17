@@ -352,3 +352,73 @@ html, body {
     background: #a9b8e8;
     cursor: not-allowed;
 }
+
+
+/* 추론 과정 · 도구 호출 상태 (docs/07-thinking-tool-status-design.md 6.2절) */
+.thinking-panel {
+    background: #f6f7f9;
+    border: 1px solid #e3e5e8;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+}
+
+.thinking-panel summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: #6b7280;
+    user-select: none;
+}
+
+.thinking-body {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #6b7280;
+    margin-top: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.thinking-body > :last-child {
+    margin-bottom: 0;
+}
+
+/* 진행 상태 — 말풍선 "아래"의 형제 요소 (내부 아님). 현재 작업 하나만 문자로 표시,
+   답변 완료 시 제거된다. */
+.stream-status {
+    align-self: flex-start;
+    margin: -10px 0 0 6px;
+    font-size: 12px;
+    color: #8a8f98;
+    animation: status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+/* 참조 문서 — 답변 완료 후 말풍선 아래에 확장자별 아이콘과 함께 표시. */
+.source-list {
+    align-self: flex-start;
+    margin: -10px 0 0 6px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    max-width: 70%;
+}
+
+.source-label {
+    font-size: 11px;
+    color: #8a8f98;
+}
+
+.source-item {
+    font-size: 12px;
+    background: #f0f2f5;
+    border: 1px solid #e3e5e8;
+    border-radius: 999px;
+    padding: 3px 10px;
+    color: #444;
+}
