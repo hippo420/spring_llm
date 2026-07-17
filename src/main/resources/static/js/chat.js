@@ -135,11 +135,17 @@
         return session;
     }
 
-    async function uploadAttachment(file) {
+    async function uploadAttachment(sessionId, file) {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/attachments', {method: 'POST', body: formData});
-        if (!res.ok) throw new Error('첨부파일 업로드 실패');
+        const res = await fetch(`/api/sessions/${sessionId}/attachments`, {method: 'POST', body: formData});
+        if (!res.ok) {
+            let detail = '';
+            try {
+                detail = (await res.json()).message ?? '';
+            } catch (ignored) { /* 본문 없는 에러 응답 */ }
+            throw new Error(detail || `첨부파일 업로드 실패 (${res.status})`);
+        }
         return res.json();
     }
 
@@ -199,6 +205,8 @@
 
     fileInput.addEventListener('change', () => {
         setPendingFile(fileInput.files[0] ?? null);
+        // 문서를 올려놓고 다른 기능으로 질문하는 함정을 막는다 — 첨부하면 문서 Q&A로 전환.
+        if (fileInput.files[0]) featureSelect.value = 'DOC_QA';
     });
 
     removeAttachmentBtn.addEventListener('click', () => setPendingFile(null));
@@ -228,8 +236,8 @@
         let attachmentTag = '';
         if (file) {
             try {
-                const uploaded = await uploadAttachment(file);
-                attachmentTag = `📎 ${uploaded.filename}`;
+                const uploaded = await uploadAttachment(state.currentSessionId, file);
+                attachmentTag = `📎 ${uploaded.filename} (${uploaded.chunkCount}청크 인덱싱됨)`;
             } catch (err) {
                 addMessageBubble('assistant', `[첨부파일 업로드 오류: ${err.message}]`);
             }
@@ -240,6 +248,9 @@
         if (userBubbleText) addMessageBubble('user', userBubbleText);
         messageInput.value = '';
         messageInput.style.height = 'auto';
+
+        // 파일만 올리고 질문이 없으면 인덱싱까지만 — 빈 질문을 LLM에 보내지 않는다.
+        if (!text) return;
 
         sendBtn.disabled = true;
         const assistantBubble = addLoadingBubble();

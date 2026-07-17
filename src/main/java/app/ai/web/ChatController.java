@@ -6,18 +6,12 @@ import app.ai.chat.history.ChatSessionTitleGenerator;
 import app.ai.chat.dto.ChatMessageDto;
 import app.ai.chat.dto.ChatMessageRequest;
 import app.ai.chat.dto.ChatSessionSummary;
-import app.ai.chat.feature.BrainstormService;
 import app.ai.chat.feature.ChatFeature;
 import app.ai.chat.feature.ChatFeatureService;
-import app.ai.chat.feature.CodeExplainService;
-import app.ai.chat.feature.CodeReviewService;
 import app.ai.chat.feature.DocQaService;
-import app.ai.chat.feature.EmailWriteService;
-import app.ai.chat.feature.GrammarCheckService;
-import app.ai.chat.feature.SentimentAnalysisService;
-import app.ai.chat.feature.TranslateService;
 import app.ai.chat.feature.history.HistoryChatService;
 import app.ai.chat.feature.normal.GeneralChatService;
+import app.ai.rag.DocumentIngestionService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
@@ -41,39 +34,21 @@ public class ChatController {
     private final ChatSessionTitleGenerator titleGenerator;
     private final GeneralChatService generalChatService;
     private final HistoryChatService historyChatService;
-    private final TranslateService translateService;
-    private final CodeExplainService codeExplainService;
-    private final CodeReviewService codeReviewService;
-    private final GrammarCheckService grammarCheckService;
-    private final EmailWriteService emailWriteService;
-    private final BrainstormService brainstormService;
     private final DocQaService docQaService;
-    private final SentimentAnalysisService sentimentAnalysisService;
+    private final DocumentIngestionService documentIngestionService;
 
     public ChatController(ChatHistoryService chatHistoryService,
                           ChatSessionTitleGenerator titleGenerator,
                           GeneralChatService generalChatService,
                           HistoryChatService historyChatService,
-                          TranslateService translateService,
-                          CodeExplainService codeExplainService,
-                          CodeReviewService codeReviewService,
-                          GrammarCheckService grammarCheckService,
-                          EmailWriteService emailWriteService,
-                          BrainstormService brainstormService,
                           DocQaService docQaService,
-                          SentimentAnalysisService sentimentAnalysisService) {
+                          DocumentIngestionService documentIngestionService) {
         this.chatHistoryService = chatHistoryService;
         this.titleGenerator = titleGenerator;
         this.generalChatService = generalChatService;
         this.historyChatService = historyChatService;
-        this.translateService = translateService;
-        this.codeExplainService = codeExplainService;
-        this.codeReviewService = codeReviewService;
-        this.grammarCheckService = grammarCheckService;
-        this.emailWriteService = emailWriteService;
-        this.brainstormService = brainstormService;
         this.docQaService = docQaService;
-        this.sentimentAnalysisService = sentimentAnalysisService;
+        this.documentIngestionService = documentIngestionService;
     }
 
     @GetMapping("/features")
@@ -98,6 +73,8 @@ public class ChatController {
 
     @DeleteMapping("/sessions/{sessionId}")
     public void deleteSession(@PathVariable String sessionId) {
+        // 벡터 청크는 FK가 없으므로 히스토리 삭제(rag_document CASCADE) 전에 명시적으로 지운다.
+        documentIngestionService.deleteSessionDocuments(sessionId);
         chatHistoryService.deleteSession(sessionId);
     }
 
@@ -138,20 +115,19 @@ public class ChatController {
         return switch (feature) {
             case GENERAL_CHAT -> generalChatService;
             case HISTORY -> historyChatService;
-            case TRANSLATE -> translateService;
-            case CODE_EXPLAIN -> codeExplainService;
-            case CODE_REVIEW -> codeReviewService;
-            case GRAMMAR_CHECK -> grammarCheckService;
-            case EMAIL_WRITE -> emailWriteService;
-            case BRAINSTORM -> brainstormService;
-            case DOC_QA -> docQaService;
-            case SENTIMENT_ANALYSIS -> sentimentAnalysisService;
+            case DOC_RAG -> docQaService;
         };
     }
 
-    @PostMapping("/attachments")
-    public AttachmentDto uploadAttachment(@RequestParam("file") MultipartFile file) {
-        // TODO: 파싱(Tika/PDF 리더) 후 RAG용으로 pgvector에 임베딩. 지금은 업로드만 지원.
-        return new AttachmentDto(UUID.randomUUID().toString(), file.getOriginalFilename(), file.getSize());
+    /** 문서 업로드 + 인제스천 (파싱 → 청크 → 임베딩 → pgvector). 문서는 이 세션에서만 검색된다. */
+    @PostMapping("/sessions/{sessionId}/attachments")
+    public AttachmentDto uploadAttachment(@PathVariable String sessionId,
+                                          @RequestParam("file") MultipartFile file) {
+        return documentIngestionService.ingest(sessionId, file);
+    }
+
+    @GetMapping("/sessions/{sessionId}/attachments")
+    public List<AttachmentDto> attachments(@PathVariable String sessionId) {
+        return documentIngestionService.findDocuments(sessionId);
     }
 }

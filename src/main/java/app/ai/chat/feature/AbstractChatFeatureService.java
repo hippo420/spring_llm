@@ -40,10 +40,20 @@ public abstract class AbstractChatFeatureService implements ChatFeatureService {
     @Override
     public Flux<String> stream(String sessionId, String userMessage) {
         ConversationContext context = chatHistoryService.getContext(sessionId);
+        List<Message> messages = augment(sessionId, userMessage, toMessages(context));
         return chatClient.prompt()
-                .messages(toMessages(context))
+                .messages(messages)
                 .stream()
                 .content();
+    }
+
+    /**
+     * 프롬프트 전송 직전, 서브클래스가 메시지 리스트를 증강할 수 있는 훅. 기본은 무변경.
+     * 예: {@link DocQaService}가 벡터 검색 결과를 SystemMessage로 맨 앞에 주입한다
+     * (docs/doc-rag-design.md 6.3절).
+     */
+    protected List<Message> augment(String sessionId, String userMessage, List<Message> messages) {
+        return messages;
     }
 
     private static List<Message> toMessages(ConversationContext context) {

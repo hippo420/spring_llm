@@ -21,6 +21,23 @@ CREATE TABLE IF NOT EXISTS chat_message (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_message_session ON chat_message(session_id, seq);
 
+-- 문서 RAG (docs/doc-rag-design.md 4절) ------------------------------------
+-- 벡터 청크 테이블 chat_doc_chunk는 Spring AI가 자동 생성한다
+-- (spring.ai.vectorstore.pgvector.initialize-schema=true, 1024차원/HNSW/cosine).
+-- 기존 vector_store 테이블(768차원)은 다른 프로젝트 소유 — 건드리지 않는다.
+
+CREATE TABLE IF NOT EXISTS rag_document (
+    id           UUID PRIMARY KEY,
+    session_id   UUID NOT NULL REFERENCES chat_session(id) ON DELETE CASCADE,
+    filename     VARCHAR(255) NOT NULL,
+    content_type VARCHAR(100),
+    size_bytes   BIGINT NOT NULL,
+    chunk_count  INT NOT NULL DEFAULT 0,
+    status       VARCHAR(20) NOT NULL,               -- 'READY' | 'FAILED'
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_rag_document_session ON rag_document(session_id);
+
 CREATE TABLE IF NOT EXISTS chat_summary (
     id          BIGSERIAL PRIMARY KEY,
     session_id  UUID NOT NULL REFERENCES chat_session(id) ON DELETE CASCADE,
