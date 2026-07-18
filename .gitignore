@@ -6,7 +6,6 @@ logs/
 !**/src/main/**/build/
 !**/src/test/**/build/
 docs
-.env
 ### STS ###
 .apt_generated
 .classpath
@@ -20,6 +19,7 @@ bin/
 !**/src/test/**/bin/
 
 ### IntelliJ IDEA ###
+*.env
 .idea
 *.iws
 *.iml
