@@ -97,6 +97,7 @@ html, body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    position: relative;
 }
 
 .messages {
@@ -105,37 +106,102 @@ html, body {
     padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 24px;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
 }
 
-.empty-state {
-    margin: auto;
-    color: #9aa0a6;
-    font-size: 14px;
+/* 랜딩 화면: 대화가 없을 때 중앙 정렬된 인사말 + 입력창.
+   메시지가 생기면 .landing 클래스가 빠지고 일반 레이아웃(위: 메시지, 아래: 고정 입력창)으로
+   전환된다 — 입력 폼은 같은 DOM 노드를 여기서만 재배치한다(별도 폼을 두 벌 두지 않음). */
+.landing-hero {
+    display: none;
+}
+
+.main.landing {
+    justify-content: center;
+    align-items: center;
+    background:
+        radial-gradient(ellipse 900px 500px at 50% 55%, rgba(120, 170, 245, 0.16), transparent 70%),
+        radial-gradient(ellipse 700px 420px at 20% 80%, rgba(120, 170, 245, 0.10), transparent 70%);
+}
+
+.main.landing .messages {
+    display: none;
+}
+
+.main.landing .landing-hero {
+    display: block;
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.landing-greeting {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 500;
+    color: #3c4043;
+}
+
+/* 랜딩 화면의 입력창은 은은한 파란 그림자로 배경 그라데이션과 어울리게 강조한다
+   (기본 그림자는 아래 .chat-input-row 참고 — 크기·모양은 대화 중과 동일). */
+.main.landing .chat-input-row {
+    box-shadow: 0 4px 24px rgba(47, 111, 237, 0.14);
 }
 
 .message {
-    max-width: 70%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    line-height: 1.5;
+    line-height: 1.6;
     font-size: 14px;
     word-break: break-word;
 }
 
+/* 사용자 메시지: 옅은 회색 알약형 말풍선, 오른쪽 정렬 (Gemini 스타일 — 파란 배경 아님). */
 .message.user {
     align-self: flex-end;
-    background: #2f6fed;
-    color: #fff;
-    border-bottom-right-radius: 4px;
+    max-width: 75%;
+    padding: 10px 16px;
+    border-radius: 20px;
+    background: #eef0f4;
+    color: #1f2328;
     white-space: pre-wrap;
 }
 
+/* 어시스턴트 메시지: 말풍선 없이 칼럼 전체 너비의 평문으로 표시한다. */
 .message.assistant {
-    align-self: flex-start;
-    background: #fff;
-    border: 1px solid #e3e5e8;
-    border-bottom-left-radius: 4px;
+    align-self: stretch;
+    width: 100%;
+    padding: 0;
+    background: none;
+}
+
+/* 어시스턴트 답변 아래 액션 아이콘(복사 등) — hover 시에만 드러난다. */
+.message-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.message.assistant:hover .message-actions {
+    opacity: 1;
+}
+
+.msg-action-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    color: #6b7280;
+    line-height: 1;
+}
+
+.msg-action-btn:hover {
+    background: #eef0f4;
+    color: #1f2328;
 }
 
 .message .attachment-tag {
@@ -160,26 +226,27 @@ html, body {
 .message.assistant pre,
 .message.assistant blockquote,
 .message.assistant table {
-    margin: 0 0 8px;
+    margin: 0 0 12px;
 }
 
 .message.assistant h1,
 .message.assistant h2,
 .message.assistant h3 {
-    margin: 12px 0 8px;
+    margin: 22px 0 10px;
     line-height: 1.3;
+    font-weight: 600;
 }
 
 .message.assistant h1 {
-    font-size: 20px;
+    font-size: 21px;
 }
 
 .message.assistant h2 {
-    font-size: 17px;
+    font-size: 18px;
 }
 
 .message.assistant h3 {
-    font-size: 15px;
+    font-size: 16px;
 }
 
 .message.assistant ul,
@@ -187,8 +254,12 @@ html, body {
     padding-left: 22px;
 }
 
+.message.assistant ul {
+    list-style-type: circle;
+}
+
 .message.assistant li {
-    margin: 2px 0;
+    margin: 4px 0;
 }
 
 .message.assistant blockquote {
@@ -268,11 +339,13 @@ html, body {
     }
 }
 
-/* 입력 영역 */
+/* 입력 영역 — 상단 구분선이 있는 띠가 아니라, 배경 위에 떠 있는 알약형 입력창
+   (Gemini 스타일). 랜딩 화면과 대화 중 화면이 같은 폼을 공유한다. */
 .chat-form {
-    border-top: 1px solid #e3e5e8;
-    background: #fff;
-    padding: 12px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 24px 20px;
 }
 
 .attachment-chip {
@@ -285,6 +358,12 @@ html, body {
     padding: 4px 10px;
     font-size: 12px;
     margin-bottom: 8px;
+}
+
+/* [hidden]과 .attachment-chip이 동일 우선순위라 클래스 규칙이 이겨버리는 걸 방지
+   (선택자를 합쳐 우선순위를 올림) — 랜딩 화면처럼 좁은 영역에서 특히 눈에 띄던 버그. */
+.attachment-chip[hidden] {
+    display: none;
 }
 
 .attachment-chip button {
@@ -300,9 +379,13 @@ html, body {
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    background: #f5f6f8;
-    border-radius: 12px;
-    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid #e7e9ee;
+    border-radius: 999px;
+    padding: 10px 12px 10px 18px;
+    width: 100%;
+    max-width: 760px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
 }
 
 .attach-btn {
@@ -311,15 +394,32 @@ html, body {
     padding: 6px;
 }
 
+.feature-select-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
 .feature-select {
+    appearance: none;
+    -webkit-appearance: none;
     border: 1px solid #d7dae0;
-    border-radius: 8px;
-    background: #fff;
+    border-radius: 999px;
+    background: #f5f6f8;
     font-size: 13px;
-    padding: 6px 8px;
+    padding: 6px 24px 6px 12px;
     color: #1f2328;
     cursor: pointer;
-    flex-shrink: 0;
+}
+
+.feature-select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #6b7280;
+    pointer-events: none;
 }
 
 .message-input {
@@ -387,7 +487,7 @@ html, body {
    답변 완료 시 제거된다. */
 .stream-status {
     align-self: flex-start;
-    margin: -10px 0 0 6px;
+    margin: -16px 0 0;
     font-size: 12px;
     color: #8a8f98;
     animation: status-pulse 1.2s ease-in-out infinite;
@@ -401,12 +501,12 @@ html, body {
 /* 참조 문서 — 답변 완료 후 말풍선 아래에 확장자별 아이콘과 함께 표시. */
 .source-list {
     align-self: flex-start;
-    margin: -10px 0 0 6px;
+    margin: -16px 0 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    max-width: 70%;
+    max-width: 100%;
 }
 
 .source-label {
@@ -421,4 +521,13 @@ html, body {
     border-radius: 999px;
     padding: 3px 10px;
     color: #444;
+}
+
+/* 웹 검색 출처(링크형 칩) — 파일 칩과 같은 모양, 클릭 시 새 탭 */
+a.source-item {
+    text-decoration: none;
+}
+
+a.source-item:hover {
+    background: #e3e7ec;
 }

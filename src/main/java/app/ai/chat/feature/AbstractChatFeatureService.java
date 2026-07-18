@@ -70,23 +70,37 @@ public abstract class AbstractChatFeatureService implements ChatFeatureService {
      */
     @Override
     public Flux<ChatStreamEvent> streamEvents(String sessionId, String userMessage) {
-        Sinks.Many<ChatStreamEvent> statusSink = Sinks.many().unicast().onBackpressureBuffer();
+        Sinks.Many<ChatStreamEvent> sideEvents = Sinks.many().unicast().onBackpressureBuffer();
+        Consumer<ChatStreamEvent> emitter = sideEvents::tryEmitNext;
 
         Mono<List<Message>> prepared = Mono.fromCallable(() -> {
                     ConversationContext context = chatHistoryService.getContext(sessionId);
-                    return augment(sessionId, userMessage, toMessages(context), statusSink::tryEmitNext);
+                    return augment(sessionId, userMessage, toMessages(context), emitter);
                 })
-                .subscribeOn(Schedulers.boundedElastic())
-                .doFinally(signal -> statusSink.tryEmitComplete());
+                .subscribeOn(Schedulers.boundedElastic());
 
-        Flux<ChatStreamEvent> model = prepared.flatMapMany(messages -> chatClient.prompt()
-                .messages(messages)
-                .stream()
-                .chatResponse()
-                .concatMap(AbstractChatFeatureService::toEvents));
+        Flux<ChatStreamEvent> model = prepared.flatMapMany(messages -> {
+                    ChatClient.ChatClientRequestSpec spec = chatClient.prompt().messages(messages);
+                    customizeRequest(sessionId, spec, emitter);
+                    return spec.stream()
+                            .chatResponse()
+                            .concatMap(AbstractChatFeatureService::toEvents);
+                })
+                // sink는 모델 스트리밍이 끝날 때 닫는다 — 도구 상태(TOOL) 이벤트는 모델
+                // 응답 도중(내부 도구 실행 루프)에도 발생하기 때문 (augment 시점만이 아니라).
+                .doFinally(signal -> sideEvents.tryEmitComplete());
 
         // 모델 이벤트는 prepared 완료 후에만 시작되므로 STATUS → 모델 순서가 자연히 보장된다.
-        return Flux.merge(statusSink.asFlux(), model);
+        return Flux.merge(sideEvents.asFlux(), model);
+    }
+
+    /**
+     * 프롬프트 전송 직전, 서브클래스가 요청 스펙을 확장할 수 있는 훅. 기본은 무변경.
+     * 예: {@link ToolRagService}가 도구({@code toolCallbacks})와 요청 컨텍스트
+     * ({@code toolContext} — 세션 ID, 이벤트 발행 콜백)를 얹는다.
+     */
+    protected void customizeRequest(String sessionId, ChatClient.ChatClientRequestSpec spec,
+                                    Consumer<ChatStreamEvent> eventEmitter) {
     }
 
     private static Flux<ChatStreamEvent> toEvents(ChatResponse response) {

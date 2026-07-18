@@ -14,8 +14,10 @@
     </aside>
 
     <main class="main">
-        <div id="messages" class="messages">
-            <div class="empty-state" id="emptyState">왼쪽에서 새 대화를 시작하세요.</div>
+        <div id="messages" class="messages"></div>
+
+        <div class="landing-hero" id="landingHero">
+            <p class="landing-greeting">무엇을 도와드릴까요?</p>
         </div>
 
         <form id="chatForm" class="chat-form" autocomplete="off">
@@ -24,10 +26,12 @@
                 <button type="button" id="removeAttachmentBtn" aria-label="첨부 제거">&times;</button>
             </div>
             <div class="chat-input-row">
-                <select id="featureSelect" class="feature-select" title="기능 선택"></select>
                 <label class="attach-btn" for="fileInput" title="파일 첨부">📎</label>
                 <input type="file" id="fileInput" hidden>
                 <textarea id="messageInput" class="message-input" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+                <div class="feature-select-wrap">
+                    <select id="featureSelect" class="feature-select" title="기능 선택"></select>
+                </div>
                 <button type="submit" id="sendBtn" class="send-btn">전송</button>
             </div>
         </form>

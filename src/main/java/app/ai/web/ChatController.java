@@ -1,6 +1,7 @@
 package app.ai.web;
 
 import app.ai.chat.dto.AttachmentDto;
+import app.ai.chat.feature.ToolRagService;
 import app.ai.chat.history.ChatHistoryService;
 import app.ai.chat.history.ChatSessionTitleGenerator;
 import app.ai.chat.dto.ChatMessageDto;
@@ -37,6 +38,7 @@ public class ChatController {
     private final GeneralChatService generalChatService;
     private final HistoryChatService historyChatService;
     private final DocQaService docQaService;
+    private final ToolRagService toolRagService;
     private final DocumentIngestionService documentIngestionService;
 
     public ChatController(ChatHistoryService chatHistoryService,
@@ -44,12 +46,14 @@ public class ChatController {
                           GeneralChatService generalChatService,
                           HistoryChatService historyChatService,
                           DocQaService docQaService,
+                          ToolRagService toolRagService,
                           DocumentIngestionService documentIngestionService) {
         this.chatHistoryService = chatHistoryService;
         this.titleGenerator = titleGenerator;
         this.generalChatService = generalChatService;
         this.historyChatService = historyChatService;
         this.docQaService = docQaService;
+        this.toolRagService = toolRagService;
         this.documentIngestionService = documentIngestionService;
     }
 
@@ -140,6 +144,7 @@ public class ChatController {
             case GENERAL_CHAT -> generalChatService;
             case HISTORY -> historyChatService;
             case DOC_RAG -> docQaService;
+            case TOOL_RAG -> toolRagService;
         };
     }
 

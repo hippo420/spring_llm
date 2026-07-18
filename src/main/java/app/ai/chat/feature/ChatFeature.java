@@ -3,7 +3,8 @@ package app.ai.chat.feature;
 public enum ChatFeature {
     GENERAL_CHAT("일반 대화"),
     HISTORY("대화영속성"),
-    DOC_RAG("문서 기반 RAG");
+    DOC_RAG("문서 기반 RAG"),
+    TOOL_RAG("TOOL 증강 RAG");
 
     private final String label;
 

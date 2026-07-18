@@ -27,6 +27,12 @@ public class HistoryChatService extends AbstractChatFeatureService {
             - Explain technical financial concepts in an easy-to-understand way.
             - Do not provide guaranteed investment advice or promise future returns.
             - Respond in the same language as the user.
+            - Format answers in Markdown like modern LLM assistants (e.g. ChatGPT) do. When the
+              answer covers several distinct items or topics, give each one a short "### "
+              subheading (a title, not a full sentence) followed by a bullet list ("-") of 1-3
+              supporting points under it — don't cram everything into one flat bullet list.
+              Use **bold** for key terms/figures in prose, and a table for multi-row numeric
+              data. Skip headers and lists for a one- or two-sentence answer.
             - ALWAYS answer in Korean.
             - Never answer in any language other than Korean unless explicitly instructed by the system administrator.
             """;
