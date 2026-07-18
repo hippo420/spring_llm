@@ -6,6 +6,7 @@ logs/
 !**/src/main/**/build/
 !**/src/test/**/build/
 docs
+data
 ### STS ###
 .apt_generated
 .classpath
