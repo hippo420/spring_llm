@@ -384,7 +384,118 @@
             getInvestorTrend: '수급 조회',
             getFinancialStatement: '재무제표 조회',
             getEconomicEvents: '경제지표 조회',
+            askMarketAnalyst: '시장 분석가 작업',
+            askDocumentAnalyst: '문서 분석가 작업',
+            askNewsAnalyst: '뉴스 분석가 작업',
+            askWebResearcher: '웹 리서처 작업',
+            criticReview: '비평가 검토',
+            reviseAnswer: '답변 보완',
         };
+
+        // ── 에이전트 활동 타임라인 (멀티 에이전트 전용) ──
+        // 워커 위임(askXxx)과 워커 내부 도구의 TOOL 이벤트를 상태 한 줄로 덮어쓰지 않고
+        // 워커별 트리로 누적한다. 워커 위임 이벤트가 처음 올 때만 패널이 만들어지므로
+        // 다른 기능(TOOL_RAG 등)의 화면은 기존 그대로다. 워커 내부 도구 이벤트는 백엔드가
+        // 태깅한 agent(워커 표시명) 필드로 소속 워커에 귀속된다.
+        const AGENT_TOOL_NAMES = {
+            askMarketAnalyst: '시장 데이터 분석가',
+            askDocumentAnalyst: '문서 분석가',
+            askNewsAnalyst: '뉴스 분석가',
+            askWebResearcher: '웹 리서처',
+            // 비평가 루프(백엔드 CriticLoop 발행)도 워커와 같은 행으로 표시한다.
+            criticReview: '비평가',
+            reviseAnswer: '답변 보완',
+        };
+        const AGENT_ICONS = {
+            '시장 데이터 분석가': '📊',
+            '문서 분석가': '📘',
+            '뉴스 분석가': '📰',
+            '웹 리서처': '🌐',
+            '비평가': '🧐',
+            '답변 보완': '✍️',
+        };
+        let agentPanel = null;
+        let agentBody = null;
+        const openWorkers = new Map(); // 표시명 → 실행 중인 워커 행 (직렬 실행이라 이름당 최대 1개)
+        let lastWorker = null;         // agent 태그가 없는 이벤트의 폴백 귀속처
+
+        function ensureAgentPanel() {
+            if (agentPanel) return;
+            ensureSkeleton();
+            agentPanel = document.createElement('details');
+            agentPanel.className = 'agent-panel';
+            agentPanel.open = true;
+            agentPanel.appendChild(el('summary', null, '🤖 에이전트 활동'));
+            agentBody = el('div', 'agent-body');
+            agentPanel.appendChild(agentBody);
+            assistantBubble.insertBefore(agentPanel, answerBody);
+        }
+
+        // args는 {"task":"..."} JSON의 200자 프리뷰 — 절단으로 JSON이 깨질 수 있어
+        // 파싱 실패 시 정규식으로 task 값만 건진다.
+        function parseTask(args) {
+            try {
+                const parsed = JSON.parse(args);
+                if (parsed && typeof parsed.task === 'string') return parsed.task;
+            } catch (ignored) { /* 아래 정규식 폴백 */ }
+            const m = /"task"\s*:\s*"([^"]*)/.exec(args ?? '');
+            return m ? m[1] : '';
+        }
+
+        function formatDuration(ms) {
+            return ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms';
+        }
+
+        // 워커 위임 이벤트: start → 워커 행(이름 + 하위 과제) 추가, end → ✓/✗ + 소요시간.
+        function onWorkerEvent(status) {
+            ensureAgentPanel();
+            const name = AGENT_TOOL_NAMES[status.name];
+            if (status.phase === 'start') {
+                const row = el('div', 'agent-worker');
+                const head = el('div', 'agent-worker-head');
+                head.appendChild(el('span', 'agent-name', `${AGENT_ICONS[name] ?? '🤖'} ${name}`));
+                const statusEl = el('span', 'agent-status running', '⏳ 작업 중...');
+                head.appendChild(statusEl);
+                row.appendChild(head);
+                const task = parseTask(status.args);
+                if (task) row.appendChild(el('div', 'agent-task', `“${task}”`));
+                const toolsEl = el('div', 'agent-tools');
+                row.appendChild(toolsEl);
+                agentBody.appendChild(row);
+                const worker = {toolsEl, statusEl, openTools: new Map()};
+                openWorkers.set(name, worker);
+                lastWorker = worker;
+            } else {
+                const worker = openWorkers.get(name);
+                if (!worker) return;
+                worker.statusEl.className = 'agent-status ' + (status.ok ? 'ok' : 'fail');
+                worker.statusEl.textContent =
+                    (status.ok ? '✓ 완료' : '✗ 실패') + ' · ' + formatDuration(status.durationMs ?? 0);
+                openWorkers.delete(name);
+                if (lastWorker === worker) lastWorker = null;
+            }
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        // 워커 내부 도구 이벤트: 소속 워커 행 아래 들여쓴 줄로 진행을 보여준다.
+        function onWorkerToolEvent(status) {
+            const worker = openWorkers.get(status.agent) ?? lastWorker;
+            if (!worker) return;
+            const label = TOOL_LABELS[status.name] ?? status.name;
+            if (status.phase === 'start') {
+                const line = el('div', 'agent-tool running', `⏳ ${label} 중...`);
+                worker.toolsEl.appendChild(line);
+                worker.openTools.set(status.name, line);
+            } else {
+                const line = worker.openTools.get(status.name);
+                if (!line) return;
+                line.className = 'agent-tool ' + (status.ok ? 'ok' : 'fail');
+                line.textContent =
+                    (status.ok ? '✓' : '✗') + ` ${label} · ${formatDuration(status.durationMs ?? 0)}`;
+                worker.openTools.delete(status.name);
+            }
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
 
         // 전송 직후 기본 상태 — 모델이 도구 호출을 준비하는 동안(수 초~수십 초) 화면이
         // 무반응으로 보이지 않게 한다. 서버 STATUS/도구 이벤트가 오면 대체된다.
@@ -415,6 +526,7 @@
                 sourceFiles = [...new Set([...sourceFiles, ...names])];
             },
             // 도구 실행(Phase 2)도 "현재 작업" 한 줄 표시로 흡수한다 — 한국어 라벨로.
+            // 멀티 에이전트 이벤트는 추가로 타임라인 패널에도 누적한다.
             onTool: (status) => {
                 const label = TOOL_LABELS[status.name] ?? status.name;
                 if (status.phase === 'start') {
@@ -422,11 +534,17 @@
                 } else {
                     showStatus(status.ok ? `${label} 완료` : `${label} 실패`);
                 }
+                if (AGENT_TOOL_NAMES[status.name]) {
+                    onWorkerEvent(status);
+                } else if (agentPanel) {
+                    onWorkerToolEvent(status);
+                }
             },
             onDone: () => {
                 clearStatus();
-                // 최종 화면의 주인공은 답변 — 추론 패널은 자동으로 접는다 (토글 가능).
+                // 최종 화면의 주인공은 답변 — 추론·에이전트 패널은 자동으로 접는다 (토글 가능).
                 if (thinkingPanel && !thinkingPanel.hidden) thinkingPanel.open = false;
+                if (agentPanel) agentPanel.open = false;
                 if (!rawText && !thinkingText) assistantBubble.innerHTML = '';
                 if (rawText) addCopyAction(assistantBubble, rawText);
                 renderSources();

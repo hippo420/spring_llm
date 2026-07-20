@@ -483,6 +483,85 @@ html, body {
     margin-bottom: 0;
 }
 
+/* 에이전트 활동 타임라인 (멀티 에이전트) — 워커 위임과 내부 도구 진행을 워커별 트리로
+   누적한다. 추론 패널과 같은 톤의 접이식 패널이며, 답변 완료 시 자동으로 접힌다. */
+.agent-panel {
+    background: #f6f7f9;
+    border: 1px solid #e3e5e8;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+}
+
+.agent-panel summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: #6b7280;
+    user-select: none;
+}
+
+.agent-body {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.agent-worker {
+    border-left: 2px solid #d7dbe2;
+    padding-left: 10px;
+}
+
+.agent-worker-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.agent-name {
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.agent-status {
+    font-size: 11px;
+}
+
+.agent-task {
+    font-size: 12px;
+    color: #8a8f98;
+    margin: 2px 0;
+}
+
+.agent-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+}
+
+.agent-tool {
+    font-size: 12px;
+    padding-left: 14px;
+    color: #6b7280;
+}
+
+.agent-status.running,
+.agent-tool.running {
+    color: #2f6fed;
+    animation: status-pulse 1.2s ease-in-out infinite;
+}
+
+.agent-status.ok {
+    color: #16a34a;
+}
+
+.agent-status.fail,
+.agent-tool.fail {
+    color: #dc2626;
+}
+
 /* 진행 상태 — 말풍선 "아래"의 형제 요소 (내부 아님). 현재 작업 하나만 문자로 표시,
    답변 완료 시 제거된다. */
 .stream-status {
